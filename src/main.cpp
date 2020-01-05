@@ -7,16 +7,13 @@
 #include <iostream>
 #include <string>
 
-
 int main(int argc, char** argv) {
   using namespace boost::program_options;
   bool is_help{};
-
   options_description description{ "implant [options]" };
   description.add_options()("help,h", bool_switch(&is_help), "display a help dialog")(
       "host,h", value<std::string>()->default_value("localhost"), "hostname or IP address of CNC server")(
       "service,s", value<std::string>()->default_value("http"), "service (HTTP/HTTPS) or port of CNC server");
-
   variables_map vm;
   try {
     store(parse_command_line(argc, argv, description), vm);
@@ -25,7 +22,6 @@ int main(int argc, char** argv) {
     std::cerr << e.what() << "\n";
     return -1;
   }
-
   if(is_help) {
     std::cout << description;
     return 0;
