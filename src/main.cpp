@@ -6,6 +6,14 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <string>
+#include <thread>
+#include <chrono>
+
+#include <sstream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
+
 
 int main(int argc, char** argv) {
   using namespace boost::program_options;
@@ -38,8 +46,22 @@ int main(int argc, char** argv) {
 
   boost::asio::io_context io_context;
   try {
-    const auto response = make_request(host, service, R"({"key": "value"})", io_context);
-    std::cout << response << "\n";
+    while(true) {
+      boost::property_tree::ptree tasks;
+      try {
+        const auto response = make_request(host, service, R"({"key": "value"})", io_context);
+        std::cout << response << "\n";
+        std::stringstream ss{response};
+        boost::property_tree::read_json(ss, tasks);
+        for(const auto& [task_tree_key, task_tree_value] : tasks) {
+          const auto task = parse_task_from(task_tree_value);
+        }
+      } catch(const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+      }
+      std::this_thread::sleep_for(std::chrono::seconds{ 5 });
+    }
+
   } catch(boost::system::system_error& se) {
     std::cerr << "Error: " << se.what() << std::endl;
   }
