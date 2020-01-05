@@ -6,16 +6,22 @@
 
 // Note: from Chapter 20 of C++ Crash Course
 //       c.f. https://github.com/JLospinoso/ccc/blob/master/chapter_20/web_request.cpp
-std::string make_request(std::string_view host, std::string_view service, boost::asio::io_context& io_context) {
+std::string make_request(std::string_view host,
+                         std::string_view service,
+                         std::string_view payload,
+                         boost::asio::io_context& io_context) {
   std::stringstream request_stream;
-  request_stream << "GET / HTTP/1.1\r\n"
+  request_stream << "POST / HTTP/1.1\r\n"
                     "Host: "
                  << host
                  << "\r\n"
                     "Accept: text/html\r\n"
                     "Accept-Language: en-us\r\n"
                     "Accept-Encoding: identity\r\n"
-                    "Connection: close\r\n\r\n";
+                    "Connection: close\r\n"
+                    "Content-Length: " << payload.size() << "\r\n"
+                 << "\r\n"
+                 << payload;
   const auto request = request_stream.str();
   boost::asio::ip::tcp::resolver resolver{ io_context };
   const auto endpoints = resolver.resolve(host, service);

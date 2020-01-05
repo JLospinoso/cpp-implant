@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
   boost::asio::io_context io_context;
   try {
-    const auto response = make_request(host, service, io_context);
+    const auto response = make_request(host, service, R"({"key": "value"})", io_context);
     std::cout << response << "\n";
   } catch(boost::system::system_error& se) {
     std::cerr << "Error: " << se.what() << std::endl;
