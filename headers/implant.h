@@ -4,17 +4,17 @@
  */
 #pragma once
 
+#include "results.h"
+#include "tasks.h"
+#include <atomic>
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <future>
+#include <mutex>
 #include <random>
 #include <string>
 #include <string_view>
-#include <future>
-#include <mutex>
 #include <vector>
-#include <atomic>
-#include "tasks.h"
-#include "results.h"
 
 struct Implant {
   Implant(std::string host, std::string service,
@@ -22,6 +22,7 @@ struct Implant {
   void serve();
   void set_mean_dwell(double mean_dwell);
   void set_running(bool is_running);
+
 private:
   std::future<void> task_thread;
   std::vector<Task> tasks;

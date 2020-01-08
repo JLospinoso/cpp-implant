@@ -10,8 +10,9 @@
 #include <ostream>
 #include <sstream>
 
-[[nodiscard]] Task parse_task_from(const boost::property_tree::ptree &task_tree,
-                                   std::function<void(const Configuration&)> setter) {
+[[nodiscard]] Task
+parse_task_from(const boost::property_tree::ptree &task_tree,
+                std::function<void(const Configuration &)> setter) {
   const auto type = task_tree.get_child("type").get_value<std::string>();
   const auto id_str = task_tree.get_child("id").get_value<std::string>();
   std::stringstream ss{id_str};
@@ -23,6 +24,9 @@
   }
   if (type == GetTask::key) {
     return GetTask{id, task_tree.get_child("path").get_value<std::string>()};
+  }
+  if (type == DeleteTask::key) {
+    return DeleteTask{id, task_tree.get_child("path").get_value<std::string>()};
   }
   if (type == PutTask::key) {
     return PutTask{id, task_tree.get_child("path").get_value<std::string>(),
@@ -91,30 +95,42 @@ Result ListTask::run() const {
 ExecuteTask::ExecuteTask(const boost::uuids::uuid &id, std::string command)
     : id(id), command(std::move(command)) {}
 Result ExecuteTask::run() const {
+  std::string result;
   try {
-    std::array<char, 128> buffer;
+    std::array<char, 128> buffer{};
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"),
                                                   pclose);
     if (!pipe)
       throw std::runtime_error("Failed to open pipe.");
-    std::string result;
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
       result += buffer.data();
     }
     return Result{id, std::move(result), true};
   } catch (const std::exception &e) {
-    Result{id, e.what(), false};
+    return Result{id, e.what(), false};
   }
-  return Result{id, "Not implemented.", false};
 }
 
 ConfigureTask::ConfigureTask(const boost::uuids::uuid &id, double mean_dwell,
-                             bool is_running, std::function<void(const Configuration&)> setter)
-    : id{id}, mean_dwell{mean_dwell}, is_running{is_running}, setter{std::move(setter)} {
-}
+                             bool is_running,
+                             std::function<void(const Configuration &)> setter)
+    : id{id}, mean_dwell{mean_dwell}, is_running{is_running}, setter{std::move(
+                                                                  setter)} {}
 Result ConfigureTask::run() const {
   setter(Configuration{mean_dwell, is_running});
   return Result{id, "Configured.", true};
 }
 Configuration::Configuration(const double meanDwell, const bool isRunning)
     : mean_dwell(meanDwell), is_running(isRunning) {}
+
+DeleteTask::DeleteTask(const boost::uuids::uuid &id, std::string path)
+    : id{id}, path{std::move(path)} {}
+
+Result DeleteTask::run() const {
+  try {
+    std::filesystem::remove(path);
+    return Result{id, "Removed.", true};
+  } catch (const std::exception &e) {
+    return Result{id, e.what(), false};
+  }
+}

@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   Implant implant{host, service, io_context};
   try {
     implant.serve();
-  } catch(boost::system::system_error& se) {
+  } catch(const boost::system::system_error& se) {
     std::cerr << "Error: " << se.what() << std::endl;
   }
 }
