@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   try {
     store(parse_command_line(argc, argv, description), vm);
     notify(vm);
-  } catch(std::exception& e) {
+  } catch(const std::exception& e) {
     std::cerr << e.what() << "\n";
     return -1;
   }
