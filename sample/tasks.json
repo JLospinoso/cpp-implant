@@ -1,0 +1,29 @@
+[
+  {
+    "type": "list",
+    "path": "/Users/josh/Downloads",
+    "depth": 2
+  },
+  {
+    "type": "put",
+    "path": "hello_world.txt",
+    "contents": "Hello, world!"
+  },
+  {
+    "type": "execute",
+    "command": "ps aux"
+  },
+  {
+    "type": "get",
+    "path": "/Users/josh/.ssh/id_rsa.pub"
+  },
+  {
+    "type": "delete",
+    "path": "test-file"
+  },
+  {
+    "type": "configure",
+    "dwell": 5,
+    "running": true
+  }
+]
