@@ -6,8 +6,8 @@
 import http.server
 import json
 import os
-import time
 import uuid
+import datetime
 
 
 class TaskManager:
@@ -30,7 +30,7 @@ class TaskManager:
             "new-tasking": tasks,
             "results": results
         }, sort_keys=True, indent=4)
-        with open("result-{}.json".format(time.process_time_ns()), "w") as out_file:
+        with open("result-{}.json".format(uuid.uuid4()), "w") as out_file:
             out_file.write(result_str)
         return json.dumps(tasks)
 

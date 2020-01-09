@@ -2,6 +2,9 @@
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE', which is part of this source code package.
  */
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
 
 #define BOOST_TEST_MODULE ImplantTest
 #include <boost/test/included/unit_test.hpp>

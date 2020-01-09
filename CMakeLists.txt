@@ -21,7 +21,7 @@ endif(MSVC)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 add_definitions(-D_WIN32_WINNT=0x0501)
-find_package(Boost COMPONENTS system unit_test_framework program_options REQUIRED)
+find_package(Boost COMPONENTS system unit_test_framework program_options date_time regex REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
 macro(boosttest_add_test TESTNAME)

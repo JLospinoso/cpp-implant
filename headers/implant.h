@@ -4,10 +4,10 @@
  */
 #pragma once
 
+#include <boost/asio.hpp>
 #include "results.h"
 #include "tasks.h"
 #include <atomic>
-#include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <future>
 #include <mutex>

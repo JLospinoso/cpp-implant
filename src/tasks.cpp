@@ -9,6 +9,7 @@
 #include <fstream>
 #include <ostream>
 #include <sstream>
+#include <array>
 
 [[nodiscard]] Task
 parse_task_from(const boost::property_tree::ptree &task_tree,
@@ -92,14 +93,21 @@ Result ListTask::run() const {
   return Result{id, ss.str(), true};
 }
 
+#ifdef _WIN32
+#define PLATFORM_SPECIFIC_POPEN _popen
+#define PLATFORM_SPECIFIC_PCLOSE _pclose
+#else
+#define PLATFORM_SPECIFIC_POPEN popen
+#define PLATFORM_SPECIFIC_PCLOSE pclose
+#endif
+
 ExecuteTask::ExecuteTask(const boost::uuids::uuid &id, std::string command)
     : id(id), command(std::move(command)) {}
 Result ExecuteTask::run() const {
   std::string result;
   try {
     std::array<char, 128> buffer{};
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"),
-                                                  pclose);
+    std::unique_ptr<FILE, decltype(&PLATFORM_SPECIFIC_PCLOSE)> pipe{ PLATFORM_SPECIFIC_POPEN(command.c_str(), "r"), PLATFORM_SPECIFIC_PCLOSE };
     if (!pipe)
       throw std::runtime_error("Failed to open pipe.");
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {

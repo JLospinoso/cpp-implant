@@ -11,7 +11,7 @@
   },
   {
     "type": "execute",
-    "command": "ps aux"
+    "command": "netstat -n"
   },
   {
     "type": "get",

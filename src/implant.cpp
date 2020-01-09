@@ -2,6 +2,10 @@
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE', which is part of this source code package.
  */
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <boost/asio.hpp>
 #include "implant.h"
 #include "tasks.h"
 #include <algorithm>
